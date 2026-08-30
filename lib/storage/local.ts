@@ -5,7 +5,7 @@ import { ResumeSchema, type Resume } from "../resume/schema";
 import type { ResumeStorage, ResumeMeta } from "./types";
 import { fetchDriveFileText, uploadDriveFile } from "./googleDrive";
 import { getOAuthAccessToken } from "./googleOAuth";
-import { uploadToSupabase } from "./supabase";
+import { uploadToSupabase, downloadFromSupabase } from "./supabase";
 
 export class LocalFolderStorage implements ResumeStorage {
   private root: string;
@@ -32,20 +32,33 @@ export class LocalFolderStorage implements ResumeStorage {
         const fileId = process.env.GOOGLE_DRIVE_MASTER_BANK_FILE_ID;
         if (!fileId) throw new Error("GOOGLE_DRIVE_MASTER_BANK_FILE_ID not set in environment");
         content = await fetchDriveFileText(fileId);
+      } else if (source === "supabase") {
+        const bucket = process.env.SUPABASE_MASTER_BANK_BUCKET;
+        const filePath = process.env.SUPABASE_MASTER_BANK_PATH;
+        if (!bucket || !filePath) {
+          throw new Error("SUPABASE_MASTER_BANK_BUCKET / SUPABASE_MASTER_BANK_PATH not set in environment");
+        }
+        content = await downloadFromSupabase(bucket, filePath);
       } else {
         content = await fs.readFile(this.masterPath(), "utf8");
       }
       const parsed = yaml.load(content) as Record<string, unknown> | undefined;
       return parsed ?? {};
     } catch (err) {
-      const where = source === "drive" ? `Google Drive file ${process.env.GOOGLE_DRIVE_MASTER_BANK_FILE_ID}` : this.masterPath();
+      const where =
+        source === "drive"
+          ? `Google Drive file ${process.env.GOOGLE_DRIVE_MASTER_BANK_FILE_ID}`
+          : source === "supabase"
+          ? `Supabase ${process.env.SUPABASE_MASTER_BANK_BUCKET}/${process.env.SUPABASE_MASTER_BANK_PATH}`
+          : this.masterPath();
       throw new Error(`Failed to load resume_master_bank.yaml from ${where}: ${String(err)}`);
     }
   }
 
   async saveMasterDataBank(data: Record<string, unknown>): Promise<void> {
-    if ((process.env.MASTER_BANK_SOURCE ?? "local") === "drive") {
-      throw new Error("Saving the master data bank is not supported when MASTER_BANK_SOURCE=drive");
+    const source = process.env.MASTER_BANK_SOURCE ?? "local";
+    if (source === "drive" || source === "supabase") {
+      throw new Error(`Saving the master data bank is not supported when MASTER_BANK_SOURCE=${source}`);
     }
     try {
       const dump = yaml.dump(data as any);

@@ -66,6 +66,24 @@ Quick start
        currently no route that edits it anyway.
      - Leave `MASTER_BANK_SOURCE` unset (or `local`) to keep using the local `resume_master_bank.yaml` file.
 
+2a-alt. (Optional) Read the master data bank from Supabase Storage instead
+   - Simpler than 2a if you're already using Supabase for PDF export (2c) — one less credential set to
+     manage than Google Drive.
+   - Upload `resume_master_bank.yaml` into a Supabase Storage bucket (can be the same bucket as your
+     PDFs, or a separate one).
+   - Add to `.env.local`:
+     MASTER_BANK_SOURCE=supabase
+     SUPABASE_URL=<Project URL>
+     SUPABASE_SERVICE_ROLE_KEY=<service_role secret key>
+     SUPABASE_MASTER_BANK_BUCKET=<bucket name>
+     SUPABASE_MASTER_BANK_PATH=resume_master_bank.yaml
+   - Notes:
+     - `MASTER_BANK_SOURCE` only takes one value at a time — use either `drive` (2a) or `supabase`
+       (this section), not both.
+     - Read-only from the app's perspective, same as the Drive option.
+     - To update the file, edit it locally and re-upload it via the Supabase dashboard's Storage file
+       browser (no in-place editor there — download, edit, re-upload).
+
 2b. (Optional) Export generated PDFs to a Google Drive folder instead of locally
    - IMPORTANT: this does NOT reuse the service account from 2a. Service accounts have no storage
      quota of their own, so Drive rejects any file they try to create ("storageQuotaExceeded"),

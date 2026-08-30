@@ -26,3 +26,10 @@ export async function uploadToSupabase(name: string, content: Buffer, mimeType: 
   const { data } = client.storage.from(bucket).getPublicUrl(name);
   return data.publicUrl;
 }
+
+export async function downloadFromSupabase(bucket: string, path: string): Promise<string> {
+  const client = getClient();
+  const { data, error } = await client.storage.from(bucket).download(path);
+  if (error) throw new Error(`Supabase download failed: ${error.message}`);
+  return data.text();
+}
