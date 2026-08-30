@@ -1,0 +1,103 @@
+# Resume Generator (Next.js)
+
+This repository contains a prototype Next.js + TypeScript application that generates, edits, and exports resumes as PDFs using an AI provider and a pluggable storage backend.
+
+The code is intentionally structured so that the storage layer and AI provider are isolated behind interfaces. Replacing a provider later should be a matter of adding a new implementation that satisfies the interface and flipping an environment variable — no UI, API route, or PDF code should import `fs`, `js-yaml`, or any AI SDK directly.
+
+Contents
+- [Project files](#project-files)
+- [Quick start](#quick-start)
+- [Folder structure](#folder-structure)
+- [Environment variables](#environment-variables)
+- [Storage provider](#storage-provider)
+- [AI provider](#ai-provider)
+- [API routes and pages](#api-routes-and-pages)
+- [Extending the app](#extending-the-app)
+- [Notes & caveats](#notes--caveats)
+
+Project files
+- [package.json](C:/Users/84983/Desktop/Resume_Generator/package.json)
+- [tsconfig.json](C:/Users/84983/Desktop/Resume_Generator/tsconfig.json)
+- [next.config.js](C:/Users/84983/Desktop/Resume_Generator/next.config.js)
+- Code of interest:
+  - Storage: [lib/storage/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/types.ts), [lib/storage/local.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/local.ts)
+  - AI: [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts), [lib/ai/claude.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/claude.ts)
+  - Resume schema & PDF template: [lib/resume/schema.ts](C:/Users/84983/Desktop/Resume_Generator/lib/resume/schema.ts), [lib/resume/ResumeDocument.tsx](C:/Users/84983/Desktop/Resume_Generator/lib/resume/ResumeDocument.tsx)
+  - Pages & API routes: [app/page.tsx](C:/Users/84983/Desktop/Resume_Generator/app/page.tsx), [app/resume/[id]/page.tsx](C:/Users/84983/Desktop/Resume_Generator/app/resume/[id]/page.tsx), [app/api/resumes/generate/route.ts](C:/Users/84983/Desktop/Resume_Generator/app/api/resumes/generate/route.ts)
+
+Quick start
+1. Install dependencies
+   - Open a terminal in the project root (C:\Users\84983\Desktop\Resume_Generator) and run:
+     npm install
+
+2. Configure environment
+   - Create a `.env.local` file in the project root (do not commit it). Example contents:
+     RESUME_FOLDER_PATH=C:\absolute\path\to\ResumeFolder
+     STORAGE_PROVIDER=local
+     AI_PROVIDER=claude
+     ANTHROPIC_API_KEY=sk-ant-...
+
+   - The `RESUME_FOLDER_PATH` should point to a folder outside the repository. The expected layout inside that folder is:
+     - master_data_bank.yaml
+     - resumes/ (directory)
+       - <id>.json
+       - <id>.pdf
+
+   - Create the folder and an initial `master_data_bank.yaml` (can be an empty YAML object: `{}`).
+
+3. Run the dev server
+   npm run dev
+   - Open http://localhost:3000/ to view the dashboard.
+
+4. Test generation & export
+   - POST to `/api/resumes/generate` with JSON: { "jobDescription": "..." }
+     - This calls the configured AI provider and saves a validated resume JSON under `resumes/<id>.json`.
+   - POST to `/api/resumes/<id>/export` to render PDF and save `resumes/<id>.pdf`.
+
+Folder structure (high level)
+- lib/
+  - ai/
+    - types.ts            — AIProvider interface
+    - claude.ts           — ClaudeProvider implementation
+    - index.ts            — factory that returns the configured provider
+  - storage/
+    - types.ts            — ResumeStorage interface, ResumeMeta
+    - local.ts            — LocalFolderStorage implementation (reads RESUME_FOLDER_PATH)
+    - index.ts            — factory that returns the configured storage
+  - resume/
+    - schema.ts           — zod ResumeSchema (DO NOT CHANGE field names)
+    - ResumeDocument.tsx  — PDF template used for export
+- app/                    — Next.js App Router pages and API routes
+
+Storage provider
+- Interface: [lib/storage/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/types.ts)
+- Current implementation: [lib/storage/local.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/local.ts)
+  - Uses `fs/promises` and `js-yaml`.
+  - Expects to find `master_data_bank.yaml` and a `resumes/` directory under `RESUME_FOLDER_PATH`.
+  - All errors from storage methods are wrapped with clear messages to help debugging.
+
+AI provider
+- Interface: [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts)
+- Current implementation: [lib/ai/claude.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/claude.ts)
+  - Uses `@anthropic-ai/sdk` and validates the provider output with the zod schema before returning.
+  - The implementation expects to run server-side only (do not expose API keys to the client).
+
+API routes and pages
+- Dashboard: `GET /` (app/page.tsx) — lists resumes returned from storage.listResumes().
+- Generate: `POST /api/resumes/generate` — body: { jobDescription } → calls AI provider, validates, saves, and returns id.
+- Editor: `GET /resume/<id>` (app/resume/[id]/page.tsx) — basic textarea editor + save/export forms. Intended to be replaced with a client-side CodeMirror editor.
+- Save: `POST /api/resumes/<id>/save` — accepts JSON or form content, validates with zod, and saves.
+- Export: `POST /api/resumes/<id>/export` — renders PDF with `@react-pdf/renderer` and saves via storage.savePdf.
+
+Extending the app
+- To add another storage provider: implement the `ResumeStorage` interface from [lib/storage/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/types.ts), add a factory case in [lib/storage/index.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/index.ts), and set `STORAGE_PROVIDER` accordingly.
+- To add another AI provider: implement the `AIProvider` interface from [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts), add a factory case in [lib/ai/index.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/index.ts), and set `AI_PROVIDER` accordingly.
+
+Notes & caveats
+- The Resume schema is authoritative: do not change field names in [lib/resume/schema.ts](C:/Users/84983/Desktop/Resume_Generator/lib/resume/schema.ts) — the PDF template depends on it.
+- Do not import `fs`, `js-yaml`, or any AI SDK from pages, components, or routes other than the implementation files (`lib/storage/local.ts` and `lib/ai/claude.ts`). This keeps providers pluggable and prevents accidental leakage of server-only secrets to the client.
+- The Claude SDK call in [lib/ai/claude.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/claude.ts) assumes a generic completion method. If the installed SDK version exposes a different API shape, adapt that file accordingly.
+- Consider mocking the AI provider during development to avoid metered API calls and unexpected charges.
+
+Contact / Maintainer
+- This repo was scaffolded by an AI assistant using the Copilot CLI runtime in VS Code. For next steps (install deps, replace the textarea with CodeMirror, add tests), run the commands described above or open an issue describing what you'd like automated next.
