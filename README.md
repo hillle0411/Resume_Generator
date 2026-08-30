@@ -21,7 +21,7 @@ Project files
 - [next.config.js](C:/Users/84983/Desktop/Resume_Generator/next.config.js)
 - Code of interest:
   - Storage: [lib/storage/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/types.ts), [lib/storage/local.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/local.ts)
-  - AI: [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts), [lib/ai/claude.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/claude.ts)
+  - AI: [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts), [lib/ai/openrouter.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/openrouter.ts)
   - Resume schema & PDF template: [lib/resume/schema.ts](C:/Users/84983/Desktop/Resume_Generator/lib/resume/schema.ts), [lib/resume/ResumeDocument.tsx](C:/Users/84983/Desktop/Resume_Generator/lib/resume/ResumeDocument.tsx)
   - Pages & API routes: [app/page.tsx](C:/Users/84983/Desktop/Resume_Generator/app/page.tsx), [app/resume/[id]/page.tsx](C:/Users/84983/Desktop/Resume_Generator/app/resume/[id]/page.tsx), [app/api/resumes/generate/route.ts](C:/Users/84983/Desktop/Resume_Generator/app/api/resumes/generate/route.ts)
 
@@ -34,8 +34,9 @@ Quick start
    - Create a `.env.local` file in the project root (do not commit it). Example contents:
      RESUME_FOLDER_PATH=C:\absolute\path\to\ResumeFolder
      STORAGE_PROVIDER=local
-     AI_PROVIDER=claude
-     ANTHROPIC_API_KEY=sk-ant-...
+     AI_PROVIDER=openrouter
+     OPENROUTER_API_KEY=sk-or-...
+     OPENROUTER_MODEL=openai/gpt-4o-mini
 
    - The `RESUME_FOLDER_PATH` should point to a folder outside the repository. The expected layout inside that folder is:
      - master_data_bank.yaml
@@ -58,7 +59,7 @@ Folder structure (high level)
 - lib/
   - ai/
     - types.ts            — AIProvider interface
-    - claude.ts           — ClaudeProvider implementation
+    - openrouter.ts       — OpenRouterProvider implementation
     - index.ts            — factory that returns the configured provider
   - storage/
     - types.ts            — ResumeStorage interface, ResumeMeta
@@ -78,8 +79,8 @@ Storage provider
 
 AI provider
 - Interface: [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts)
-- Current implementation: [lib/ai/claude.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/claude.ts)
-  - Uses `@anthropic-ai/sdk` and validates the provider output with the zod schema before returning.
+- Current implementation: [lib/ai/openrouter.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/openrouter.ts)
+  - Calls the OpenRouter REST API via `fetch` and validates the provider output with the zod schema before returning.
   - The implementation expects to run server-side only (do not expose API keys to the client).
 
 API routes and pages
@@ -95,8 +96,8 @@ Extending the app
 
 Notes & caveats
 - The Resume schema is authoritative: do not change field names in [lib/resume/schema.ts](C:/Users/84983/Desktop/Resume_Generator/lib/resume/schema.ts) — the PDF template depends on it.
-- Do not import `fs`, `js-yaml`, or any AI SDK from pages, components, or routes other than the implementation files (`lib/storage/local.ts` and `lib/ai/claude.ts`). This keeps providers pluggable and prevents accidental leakage of server-only secrets to the client.
-- The Claude SDK call in [lib/ai/claude.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/claude.ts) assumes a generic completion method. If the installed SDK version exposes a different API shape, adapt that file accordingly.
+- Do not import `fs`, `js-yaml`, or any AI SDK from pages, components, or routes other than the implementation files (`lib/storage/local.ts` and `lib/ai/openrouter.ts`). This keeps providers pluggable and prevents accidental leakage of server-only secrets to the client.
+- The OpenRouter model name is configurable via the `OPENROUTER_MODEL` env var; adapt `lib/ai/openrouter.ts` if a different request shape is required for other models.
 - Consider mocking the AI provider during development to avoid metered API calls and unexpected charges.
 
 Contact / Maintainer
