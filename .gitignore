@@ -2,6 +2,7 @@
 node_modules/
 .next/
 .env.local
+tsconfig.tsbuildinfo
 
 # Resume storage folder may live outside but just in case
 Resume/

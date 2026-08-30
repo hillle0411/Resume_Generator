@@ -46,6 +46,26 @@ Quick start
 
    - Create the folder and an initial `resume_master_bank.yaml` (can be an empty YAML object: `{}`).
 
+2a. (Optional) Read the master data bank from Google Drive instead of the local file
+   - This lets you keep `resume_master_bank.yaml` in a Google Drive folder as the source of truth,
+     while resumes and PDFs still save locally under `RESUME_FOLDER_PATH`.
+   - One-time Google Cloud setup:
+     1. Create (or reuse) a project at https://console.cloud.google.com/, enable the **Google Drive API** for it.
+     2. Create a **Service Account** (IAM & Admin → Service Accounts), then create a JSON key for it and download it.
+     3. Open the master bank file in Google Drive, click **Share**, and share it with the service account's
+        email address (looks like `something@your-project.iam.gserviceaccount.com`) as **Viewer**.
+     4. Get the file's ID from its Drive URL: `https://drive.google.com/file/d/<FILE_ID>/view`.
+   - Add to `.env.local`:
+     MASTER_BANK_SOURCE=drive
+     GOOGLE_APPLICATION_CREDENTIALS=C:\absolute\path\to\service-account-key.json
+     GOOGLE_DRIVE_MASTER_BANK_FILE_ID=<FILE_ID from the Drive URL>
+   - Notes:
+     - `GOOGLE_APPLICATION_CREDENTIALS` is the standard env var Google's auth library reads automatically —
+       don't rename it.
+     - When `MASTER_BANK_SOURCE=drive`, the master bank is read-only from the app's perspective; there's
+       currently no route that edits it anyway.
+     - Leave `MASTER_BANK_SOURCE` unset (or `local`) to keep using the local `resume_master_bank.yaml` file.
+
 3. Run the dev server
    npm run dev
    - Open http://localhost:3000/ to view the dashboard.

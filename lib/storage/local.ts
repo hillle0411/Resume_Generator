@@ -3,6 +3,7 @@ import path from "path";
 import yaml from "js-yaml";
 import { ResumeSchema, type Resume } from "../resume/schema";
 import type { ResumeStorage, ResumeMeta } from "./types";
+import { fetchDriveFileText } from "./googleDrive";
 
 export class LocalFolderStorage implements ResumeStorage {
   private root: string;
@@ -22,16 +23,28 @@ export class LocalFolderStorage implements ResumeStorage {
   }
 
   async getMasterDataBank(): Promise<Record<string, unknown>> {
+    const source = process.env.MASTER_BANK_SOURCE ?? "local";
     try {
-      const content = await fs.readFile(this.masterPath(), "utf8");
+      let content: string;
+      if (source === "drive") {
+        const fileId = process.env.GOOGLE_DRIVE_MASTER_BANK_FILE_ID;
+        if (!fileId) throw new Error("GOOGLE_DRIVE_MASTER_BANK_FILE_ID not set in environment");
+        content = await fetchDriveFileText(fileId);
+      } else {
+        content = await fs.readFile(this.masterPath(), "utf8");
+      }
       const parsed = yaml.load(content) as Record<string, unknown> | undefined;
       return parsed ?? {};
     } catch (err) {
-      throw new Error(`resume_master_bank.yaml not found at RESUME_FOLDER_PATH (${this.root}) — check your .env.local`);
+      const where = source === "drive" ? `Google Drive file ${process.env.GOOGLE_DRIVE_MASTER_BANK_FILE_ID}` : this.masterPath();
+      throw new Error(`Failed to load resume_master_bank.yaml from ${where}: ${String(err)}`);
     }
   }
 
   async saveMasterDataBank(data: Record<string, unknown>): Promise<void> {
+    if ((process.env.MASTER_BANK_SOURCE ?? "local") === "drive") {
+      throw new Error("Saving the master data bank is not supported when MASTER_BANK_SOURCE=drive");
+    }
     try {
       const dump = yaml.dump(data as any);
       await fs.writeFile(this.masterPath(), dump, "utf8");
