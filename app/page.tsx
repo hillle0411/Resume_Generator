@@ -1,7 +1,9 @@
 import React from "react";
 import { getStorage } from "../lib/storage/index";
 
-export default async function Page() {
+type Props = { searchParams: { error?: string } };
+
+export default async function Page({ searchParams }: Props) {
   const storage = getStorage();
   const resumes = await storage.listResumes();
 
@@ -17,9 +19,14 @@ export default async function Page() {
           </li>
         ))}
       </ul>
-      <p>
-        To create a new resume, POST to <code>/api/resumes/generate</code> with JSON {"{ jobDescription }"}.
-      </p>
+
+      <h2>Generate a new resume</h2>
+      {searchParams.error && <p style={{ color: "red" }}>{searchParams.error}</p>}
+      <form method="post" action="/api/resumes/generate">
+        <textarea name="jobDescription" rows={10} cols={80} placeholder="Paste job description here..." required />
+        <br />
+        <button type="submit">Generate resume</button>
+      </form>
     </main>
   );
 }
