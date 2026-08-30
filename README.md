@@ -66,6 +66,23 @@ Quick start
        currently no route that edits it anyway.
      - Leave `MASTER_BANK_SOURCE` unset (or `local`) to keep using the local `resume_master_bank.yaml` file.
 
+2b. (Optional) Export generated PDFs to a Google Drive folder instead of locally
+   - Uses the same service account as 2a (widen its Drive share instead of setting up a second one).
+   - One-time setup:
+     1. In Google Drive, create (or pick) a folder to receive exported PDFs.
+     2. Share that folder with the service account's email address as **Editor** (it needs write access,
+        unlike the read-only master bank file).
+     3. Get the folder's ID from its Drive URL: `https://drive.google.com/drive/folders/<FOLDER_ID>`.
+   - Add to `.env.local`:
+     PDF_EXPORT_TARGET=drive
+     GOOGLE_DRIVE_PDF_FOLDER_ID=<FOLDER_ID from the Drive URL>
+   - Notes:
+     - Re-exporting the same resume ID overwrites the existing Drive file of the same name instead of
+       creating a duplicate.
+     - `POST /api/resumes/<id>/export` then returns `{ path: <Drive webViewLink> }` instead of a local
+       file path.
+     - Leave `PDF_EXPORT_TARGET` unset (or `local`) to keep saving PDFs under `RESUME_FOLDER_PATH\resumes`.
+
 3. Run the dev server
    npm run dev
    - Open http://localhost:3000/ to view the dashboard.

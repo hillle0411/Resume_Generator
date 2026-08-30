@@ -3,7 +3,7 @@ import path from "path";
 import yaml from "js-yaml";
 import { ResumeSchema, type Resume } from "../resume/schema";
 import type { ResumeStorage, ResumeMeta } from "./types";
-import { fetchDriveFileText } from "./googleDrive";
+import { fetchDriveFileText, uploadDriveFile } from "./googleDrive";
 
 export class LocalFolderStorage implements ResumeStorage {
   private root: string;
@@ -109,13 +109,21 @@ export class LocalFolderStorage implements ResumeStorage {
   }
 
   async savePdf(id: string, pdfBuffer: Buffer): Promise<string> {
+    const target = process.env.PDF_EXPORT_TARGET ?? "local";
     try {
+      if (target === "drive") {
+        const folderId = process.env.GOOGLE_DRIVE_PDF_FOLDER_ID;
+        if (!folderId) throw new Error("GOOGLE_DRIVE_PDF_FOLDER_ID not set in environment");
+        const uploaded = await uploadDriveFile(`${id}.pdf`, pdfBuffer, folderId, "application/pdf");
+        return uploaded.webViewLink;
+      }
+
       const file = path.join(this.resumesDir(), `${id}.pdf`);
       await fs.mkdir(path.dirname(file), { recursive: true });
       await fs.writeFile(file, pdfBuffer);
       return file;
     } catch (err) {
-      throw new Error(`Failed to save PDF for ${id}: ${String(err)}`);
+      throw new Error(`Failed to save PDF for ${id} (target=${target}): ${String(err)}`);
     }
   }
 }
