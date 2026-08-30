@@ -13,6 +13,7 @@ Contents
 - [AI provider](#ai-provider)
 - [API routes and pages](#api-routes-and-pages)
 - [Extending the app](#extending-the-app)
+- [Deploying to Vercel](#deploying-to-vercel)
 - [Notes & caveats](#notes--caveats)
 
 Project files
@@ -141,6 +142,21 @@ Quick start
        inside `lib/storage/supabase.ts`).
      - Leave `PDF_EXPORT_TARGET` unset (or `local`) to keep saving PDFs under `RESUME_FOLDER_PATH\resumes`.
 
+2d. (Optional) Store generated resume JSON in Supabase instead of locally
+   - Required for deploying to Vercel (see "Deploying to Vercel" below) — Vercel's serverless functions
+     have no persistent, writable filesystem, so `RESUME_FOLDER_PATH`-based storage doesn't work there.
+   - Create a Supabase Storage bucket for resumes (can reuse your PDF bucket from 2c, or a new one).
+   - Add to `.env.local`:
+     RESUME_STORAGE_TARGET=supabase
+     SUPABASE_URL=<Project URL>
+     SUPABASE_SERVICE_ROLE_KEY=<service_role secret key>
+     SUPABASE_RESUMES_BUCKET=<bucket name>
+   - Notes:
+     - Resumes are stored as `resumes/<id>.json` inside that bucket.
+     - This also makes the dashboard's "Existing resumes" list work again when deployed, since
+       `listResumes()` reads from the same bucket.
+     - Leave `RESUME_STORAGE_TARGET` unset (or `local`) to keep using `RESUME_FOLDER_PATH\resumes\<id>.json`.
+
 3. Run the dev server
    npm run dev
    - Open http://localhost:3000/ to view the dashboard.
@@ -188,6 +204,33 @@ API routes and pages
 Extending the app
 - To add another storage provider: implement the `ResumeStorage` interface from [lib/storage/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/types.ts), add a factory case in [lib/storage/index.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/index.ts), and set `STORAGE_PROVIDER` accordingly.
 - To add another AI provider: implement the `AIProvider` interface from [lib/ai/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/types.ts), add a factory case in [lib/ai/index.ts](C:/Users/84983/Desktop/Resume_Generator/lib/ai/index.ts), and set `AI_PROVIDER` accordingly.
+
+Deploying to Vercel
+- Prerequisite: this app must NOT rely on local filesystem storage once deployed — Vercel's serverless
+  functions have no persistent, writable disk. Set these before deploying:
+  RESUME_STORAGE_TARGET=supabase   (see 2d above)
+  PDF_EXPORT_TARGET=supabase       (see 2c above, or `drive` — 2b's OAuth flow also works remotely)
+  MASTER_BANK_SOURCE=supabase      (see 2a-alt above, or `drive`)
+  - `RESUME_FOLDER_PATH` and `STORAGE_PROVIDER` can be left unset entirely once all three targets above
+    point at Supabase (or Drive) — nothing will touch local disk.
+- Steps:
+  1. Push this repo to GitHub (already done if you're reading this from the deployed repo).
+  2. In the [Vercel dashboard](https://vercel.com/new), click **Add New → Project**, and import this
+     GitHub repository. Vercel auto-detects Next.js — no build settings need changing.
+  3. Before the first deploy (or in **Project Settings → Environment Variables** afterward), add every
+     env var currently in your `.env.local` *except* `RESUME_FOLDER_PATH` and any
+     `GOOGLE_APPLICATION_CREDENTIALS` file path (see note below) — same names, same values.
+  4. Click **Deploy**.
+- If you're using the Google Drive master bank option (2a) instead of Supabase: `GOOGLE_APPLICATION_CREDENTIALS`
+  normally points to a local JSON key *file*, which doesn't exist on Vercel. Instead, open that JSON file,
+  copy its entire contents, and set it as a Vercel env var named `GOOGLE_APPLICATION_CREDENTIALS_JSON` —
+  this isn't wired up in the code yet, so either switch to the Supabase master bank option (2a-alt) or ask
+  for this to be added before deploying with Drive.
+- The `/api/auth/google/*` one-time OAuth routes (2b) still work when deployed, but you'd need to update
+  the OAuth client's Authorized redirect URI in Google Cloud Console to your Vercel domain
+  (`https://<your-app>.vercel.app/api/auth/google/callback`) to run that flow again from the deployed site.
+  Simpler: do the one-time OAuth authorization locally (as already described in 2b) and just copy the
+  resulting `GOOGLE_OAUTH_REFRESH_TOKEN` into Vercel's env vars — it isn't tied to where it was generated.
 
 Notes & caveats
 - The Resume schema is authoritative: do not change field names in [lib/resume/schema.ts](C:/Users/84983/Desktop/Resume_Generator/lib/resume/schema.ts) — the PDF template depends on it.

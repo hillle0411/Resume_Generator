@@ -5,23 +5,26 @@ import { ResumeSchema, type Resume } from "../resume/schema";
 import type { ResumeStorage, ResumeMeta } from "./types";
 import { fetchDriveFileText, uploadDriveFile } from "./googleDrive";
 import { getOAuthAccessToken } from "./googleOAuth";
-import { uploadToSupabase, downloadFromSupabase } from "./supabase";
+import { uploadToSupabase, downloadFromSupabase, listSupabaseFiles } from "./supabase";
 
 export class LocalFolderStorage implements ResumeStorage {
-  private root: string;
+  private root?: string;
 
   constructor() {
-    const p = process.env.RESUME_FOLDER_PATH;
-    if (!p) throw new Error("RESUME_FOLDER_PATH not set in environment");
-    this.root = p;
+    this.root = process.env.RESUME_FOLDER_PATH;
+  }
+
+  private requireRoot(): string {
+    if (!this.root) throw new Error("RESUME_FOLDER_PATH not set in environment");
+    return this.root;
   }
 
   private masterPath() {
-    return path.join(this.root, "resume_master_bank.yaml");
+    return path.join(this.requireRoot(), "resume_master_bank.yaml");
   }
 
   private resumesDir() {
-    return path.join(this.root, "resumes");
+    return path.join(this.requireRoot(), "resumes");
   }
 
   async getMasterDataBank(): Promise<Record<string, unknown>> {
@@ -68,8 +71,39 @@ export class LocalFolderStorage implements ResumeStorage {
     }
   }
 
+  private resumesBucket(): string {
+    const bucket = process.env.SUPABASE_RESUMES_BUCKET;
+    if (!bucket) throw new Error("SUPABASE_RESUMES_BUCKET not set in environment");
+    return bucket;
+  }
+
   async listResumes(): Promise<ResumeMeta[]> {
+    const target = process.env.RESUME_STORAGE_TARGET ?? "local";
     try {
+      if (target === "supabase") {
+        const bucket = this.resumesBucket();
+        const files = await listSupabaseFiles(bucket, "resumes");
+        const metas: ResumeMeta[] = [];
+        for (const f of files) {
+          if (!f.name.endsWith(".json")) continue;
+          const id = f.name.replace(/\.json$/i, "");
+          try {
+            const raw = await downloadFromSupabase(bucket, `resumes/${f.name}`);
+            const parsed = JSON.parse(raw);
+            metas.push({
+              id,
+              company: (parsed.company as string) || undefined,
+              targetRole: (parsed.targetRole as string) || undefined,
+              status: (parsed.status as string) || undefined,
+              updatedAt: f.updatedAt,
+            });
+          } catch (inner) {
+            continue;
+          }
+        }
+        return metas;
+      }
+
       const dir = this.resumesDir();
       const entries = await fs.readdir(dir, { withFileTypes: true });
       const metas: ResumeMeta[] = [];
@@ -96,30 +130,44 @@ export class LocalFolderStorage implements ResumeStorage {
       }
       return metas;
     } catch (err) {
-      throw new Error(`Failed to list resumes in ${this.resumesDir()}: ${String(err)}`);
+      throw new Error(`Failed to list resumes (target=${target}): ${String(err)}`);
     }
   }
 
   async getResume(id: string): Promise<Resume> {
+    const target = process.env.RESUME_STORAGE_TARGET ?? "local";
     try {
-      const file = path.join(this.resumesDir(), `${id}.json`);
-      const raw = await fs.readFile(file, "utf8");
+      let raw: string;
+      if (target === "supabase") {
+        raw = await downloadFromSupabase(this.resumesBucket(), `resumes/${id}.json`);
+      } else {
+        const file = path.join(this.resumesDir(), `${id}.json`);
+        raw = await fs.readFile(file, "utf8");
+      }
       const parsed = JSON.parse(raw);
       return ResumeSchema.parse(parsed);
     } catch (err) {
-      throw new Error(`Failed to load resume ${id}: ${String(err)}`);
+      throw new Error(`Failed to load resume ${id} (target=${target}): ${String(err)}`);
     }
   }
 
   async saveResume(id: string, data: Resume): Promise<void> {
+    const target = process.env.RESUME_STORAGE_TARGET ?? "local";
     try {
-      const file = path.join(this.resumesDir(), `${id}.json`);
-      await fs.mkdir(path.dirname(file), { recursive: true });
       // validate before saving
       const parsed = ResumeSchema.parse(data);
-      await fs.writeFile(file, JSON.stringify(parsed, null, 2), "utf8");
+      const json = JSON.stringify(parsed, null, 2);
+
+      if (target === "supabase") {
+        await uploadToSupabase(this.resumesBucket(), `resumes/${id}.json`, Buffer.from(json, "utf8"), "application/json");
+        return;
+      }
+
+      const file = path.join(this.resumesDir(), `${id}.json`);
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, json, "utf8");
     } catch (err) {
-      throw new Error(`Failed to save resume ${id}: ${String(err)}`);
+      throw new Error(`Failed to save resume ${id} (target=${target}): ${String(err)}`);
     }
   }
 
@@ -135,7 +183,9 @@ export class LocalFolderStorage implements ResumeStorage {
       }
 
       if (target === "supabase") {
-        return await uploadToSupabase(`${id}.pdf`, pdfBuffer, "application/pdf");
+        const bucket = process.env.SUPABASE_PDF_BUCKET;
+        if (!bucket) throw new Error("SUPABASE_PDF_BUCKET not set in environment");
+        return await uploadToSupabase(bucket, `${id}.pdf`, pdfBuffer, "application/pdf");
       }
 
       const file = path.join(this.resumesDir(), `${id}.pdf`);
