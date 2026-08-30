@@ -1,0 +1,7 @@
+# Node
+node_modules/
+.next/
+.env.local
+
+# Resume storage folder may live outside but just in case
+Resume/

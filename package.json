@@ -1,0 +1,29 @@
+{
+  "name": "resume-generator",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "13.x",
+    "react": "18.x",
+    "react-dom": "18.x",
+    "@react-pdf/renderer": "^3.0.0",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.0.0",
+    "@uiw/react-codemirror": "^4.0.0",
+    "@codemirror/lang-json": "^6.1.0",
+    "@anthropic-ai/sdk": "^0.1.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^18.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0"
+  }
+}
