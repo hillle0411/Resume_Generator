@@ -1,0 +1,28 @@
+import { createClient } from "@supabase/supabase-js";
+
+let cachedClient: ReturnType<typeof createClient> | null = null;
+
+function getClient() {
+  if (!cachedClient) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set in environment");
+    cachedClient = createClient(url, key);
+  }
+  return cachedClient;
+}
+
+export async function uploadToSupabase(name: string, content: Buffer, mimeType: string): Promise<string> {
+  const bucket = process.env.SUPABASE_PDF_BUCKET;
+  if (!bucket) throw new Error("SUPABASE_PDF_BUCKET not set in environment");
+
+  const client = getClient();
+  const { error } = await client.storage.from(bucket).upload(name, content, {
+    contentType: mimeType,
+    upsert: true,
+  });
+  if (error) throw new Error(`Supabase upload failed: ${error.message}`);
+
+  const { data } = client.storage.from(bucket).getPublicUrl(name);
+  return data.publicUrl;
+}

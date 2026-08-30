@@ -102,6 +102,27 @@ Quick start
        step, consistent with the rest of this prototype having no auth — don't deploy this publicly
        without locking those routes down.
 
+2c. (Optional) Export generated PDFs to Supabase Storage instead of locally or Drive
+   - Simpler than 2b — no OAuth flow, just a project URL and a service role key.
+   - One-time setup:
+     1. In your Supabase project dashboard, go to **Storage** and create a new bucket (e.g. `resume-pdfs`).
+        Mark it **Public** (simplest — lets the returned link work directly in a browser with no expiry).
+     2. Go to **Project Settings → API** and copy the **Project URL** and the **service_role** secret key
+        (not the anon/public key — the service role key is required to upload from the server).
+   - Add to `.env.local`:
+     PDF_EXPORT_TARGET=supabase
+     SUPABASE_URL=<Project URL>
+     SUPABASE_SERVICE_ROLE_KEY=<service_role secret key>
+     SUPABASE_PDF_BUCKET=<bucket name, e.g. resume-pdfs>
+   - Notes:
+     - Re-exporting the same resume ID overwrites the existing file of the same name instead of
+       creating a duplicate (upload uses `upsert: true`).
+     - `POST /api/resumes/<id>/export` then returns `{ path: <public Supabase URL> }`.
+     - The service role key bypasses Row Level Security and can read/write the whole project's storage —
+       treat it like any other secret; never expose it to the browser (this app only uses it server-side,
+       inside `lib/storage/supabase.ts`).
+     - Leave `PDF_EXPORT_TARGET` unset (or `local`) to keep saving PDFs under `RESUME_FOLDER_PATH\resumes`.
+
 3. Run the dev server
    npm run dev
    - Open http://localhost:3000/ to view the dashboard.

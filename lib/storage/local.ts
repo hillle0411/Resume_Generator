@@ -5,6 +5,7 @@ import { ResumeSchema, type Resume } from "../resume/schema";
 import type { ResumeStorage, ResumeMeta } from "./types";
 import { fetchDriveFileText, uploadDriveFile } from "./googleDrive";
 import { getOAuthAccessToken } from "./googleOAuth";
+import { uploadToSupabase } from "./supabase";
 
 export class LocalFolderStorage implements ResumeStorage {
   private root: string;
@@ -118,6 +119,10 @@ export class LocalFolderStorage implements ResumeStorage {
         const token = await getOAuthAccessToken();
         const uploaded = await uploadDriveFile(token, `${id}.pdf`, pdfBuffer, folderId, "application/pdf");
         return uploaded.webViewLink;
+      }
+
+      if (target === "supabase") {
+        return await uploadToSupabase(`${id}.pdf`, pdfBuffer, "application/pdf");
       }
 
       const file = path.join(this.resumesDir(), `${id}.pdf`);
