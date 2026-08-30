@@ -4,6 +4,7 @@ import yaml from "js-yaml";
 import { ResumeSchema, type Resume } from "../resume/schema";
 import type { ResumeStorage, ResumeMeta } from "./types";
 import { fetchDriveFileText, uploadDriveFile } from "./googleDrive";
+import { getOAuthAccessToken } from "./googleOAuth";
 
 export class LocalFolderStorage implements ResumeStorage {
   private root: string;
@@ -114,7 +115,8 @@ export class LocalFolderStorage implements ResumeStorage {
       if (target === "drive") {
         const folderId = process.env.GOOGLE_DRIVE_PDF_FOLDER_ID;
         if (!folderId) throw new Error("GOOGLE_DRIVE_PDF_FOLDER_ID not set in environment");
-        const uploaded = await uploadDriveFile(`${id}.pdf`, pdfBuffer, folderId, "application/pdf");
+        const token = await getOAuthAccessToken();
+        const uploaded = await uploadDriveFile(token, `${id}.pdf`, pdfBuffer, folderId, "application/pdf");
         return uploaded.webViewLink;
       }
 

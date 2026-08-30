@@ -4,7 +4,7 @@ let cachedAuth: GoogleAuth | null = null;
 
 function getAuth(): GoogleAuth {
   if (!cachedAuth) {
-    cachedAuth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/drive"] });
+    cachedAuth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/drive.readonly"] });
   }
   return cachedAuth;
 }
@@ -33,17 +33,18 @@ export async function fetchDriveFileText(fileId: string): Promise<string> {
 }
 
 /**
- * Uploads a file into a Drive folder. If a file with the same name already exists
- * directly in that folder, it's overwritten (updated) instead of duplicated.
+ * Uploads a file into a Drive folder using the given OAuth access token (must belong
+ * to a real Google account with storage quota — service accounts can't create files).
+ * If a file with the same name already exists directly in that folder, it's
+ * overwritten (updated) instead of duplicated.
  */
 export async function uploadDriveFile(
+  token: string,
   name: string,
   content: Buffer,
   folderId: string,
   mimeType: string
 ): Promise<{ id: string; webViewLink: string }> {
-  const token = await getAccessToken();
-
   const existingId = await findFileInFolder(name, folderId, token);
 
   const boundary = "resume_gen_boundary";

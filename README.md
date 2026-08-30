@@ -67,21 +67,40 @@ Quick start
      - Leave `MASTER_BANK_SOURCE` unset (or `local`) to keep using the local `resume_master_bank.yaml` file.
 
 2b. (Optional) Export generated PDFs to a Google Drive folder instead of locally
-   - Uses the same service account as 2a (widen its Drive share instead of setting up a second one).
-   - One-time setup:
-     1. In Google Drive, create (or pick) a folder to receive exported PDFs.
-     2. Share that folder with the service account's email address as **Editor** (it needs write access,
-        unlike the read-only master bank file).
-     3. Get the folder's ID from its Drive URL: `https://drive.google.com/drive/folders/<FOLDER_ID>`.
+   - IMPORTANT: this does NOT reuse the service account from 2a. Service accounts have no storage
+     quota of their own, so Drive rejects any file they try to create ("storageQuotaExceeded"),
+     even in a folder shared with them. Writing needs a real Google account's quota, so this uses a
+     one-time OAuth sign-in as you instead.
+   - One-time Google Cloud setup:
+     1. In the same GCP project, go to **APIs & Services → Credentials → Create Credentials → OAuth
+        client ID**. Application type: **Web application**.
+     2. Under "Authorized redirect URIs", add exactly: `http://localhost:3000/api/auth/google/callback`
+     3. Save, then copy the generated **Client ID** and **Client secret**.
+     4. (First time only) You'll also need to configure the OAuth consent screen — choose **External**,
+        fill in the required fields, and add your own Google account as a **test user** (this keeps the
+        app unpublished/private, which is fine for personal use).
+   - In Google Drive, create (or pick) a folder to receive exported PDFs and copy its ID from the URL:
+     `https://drive.google.com/drive/folders/<FOLDER_ID>` (no sharing step needed — it's your own folder).
    - Add to `.env.local`:
      PDF_EXPORT_TARGET=drive
      GOOGLE_DRIVE_PDF_FOLDER_ID=<FOLDER_ID from the Drive URL>
+     GOOGLE_OAUTH_CLIENT_ID=<Client ID>
+     GOOGLE_OAUTH_CLIENT_SECRET=<Client secret>
+   - One-time authorization (do this after the env vars above are set and `npm run dev` is running):
+     1. Visit `http://localhost:3000/api/auth/google/start` in your browser.
+     2. Sign in with your Google account and approve access.
+     3. You'll land on a page showing a refresh token — copy it into `.env.local` as:
+        GOOGLE_OAUTH_REFRESH_TOKEN=<the token shown>
+     4. Restart `npm run dev` once more so it picks up the refresh token.
    - Notes:
      - Re-exporting the same resume ID overwrites the existing Drive file of the same name instead of
        creating a duplicate.
      - `POST /api/resumes/<id>/export` then returns `{ path: <Drive webViewLink> }` instead of a local
        file path.
      - Leave `PDF_EXPORT_TARGET` unset (or `local`) to keep saving PDFs under `RESUME_FOLDER_PATH\resumes`.
+     - The `/api/auth/google/*` routes are an unauthenticated local convenience for this one-time setup
+       step, consistent with the rest of this prototype having no auth — don't deploy this publicly
+       without locking those routes down.
 
 3. Run the dev server
    npm run dev
