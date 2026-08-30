@@ -2,6 +2,8 @@ import React from "react";
 import { getStorage } from "../../../lib/storage/index";
 import { ResumeSchema } from "../../../lib/resume/schema";
 
+export const dynamic = "force-dynamic";
+
 type Props = { params: { id: string } };
 
 export default async function ResumePage({ params }: Props) {

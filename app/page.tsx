@@ -1,6 +1,8 @@
 import React from "react";
 import { getStorage } from "../lib/storage/index";
 
+export const dynamic = "force-dynamic";
+
 type Props = { searchParams: { error?: string } };
 
 export default async function Page({ searchParams }: Props) {
