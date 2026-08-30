@@ -14,7 +14,7 @@ export class LocalFolderStorage implements ResumeStorage {
   }
 
   private masterPath() {
-    return path.join(this.root, "master_data_bank.yaml");
+    return path.join(this.root, "resume_master_bank.yaml");
   }
 
   private resumesDir() {
@@ -27,7 +27,7 @@ export class LocalFolderStorage implements ResumeStorage {
       const parsed = yaml.load(content) as Record<string, unknown> | undefined;
       return parsed ?? {};
     } catch (err) {
-      throw new Error(`master_data_bank.yaml not found at RESUME_FOLDER_PATH (${this.root}) — check your .env.local`);
+      throw new Error(`resume_master_bank.yaml not found at RESUME_FOLDER_PATH (${this.root}) — check your .env.local`);
     }
   }
 
@@ -36,7 +36,7 @@ export class LocalFolderStorage implements ResumeStorage {
       const dump = yaml.dump(data as any);
       await fs.writeFile(this.masterPath(), dump, "utf8");
     } catch (err) {
-      throw new Error(`Failed to write master_data_bank.yaml at ${this.root}: ${String(err)}`);
+      throw new Error(`Failed to write resume_master_bank.yaml at ${this.root}: ${String(err)}`);
     }
   }
 

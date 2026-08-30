@@ -39,12 +39,12 @@ Quick start
      OPENROUTER_MODEL=openai/gpt-4o-mini
 
    - The `RESUME_FOLDER_PATH` should point to a folder outside the repository. The expected layout inside that folder is:
-     - master_data_bank.yaml
+     - resume_master_bank.yaml
      - resumes/ (directory)
        - <id>.json
        - <id>.pdf
 
-   - Create the folder and an initial `master_data_bank.yaml` (can be an empty YAML object: `{}`).
+   - Create the folder and an initial `resume_master_bank.yaml` (can be an empty YAML object: `{}`).
 
 3. Run the dev server
    npm run dev
@@ -74,7 +74,7 @@ Storage provider
 - Interface: [lib/storage/types.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/types.ts)
 - Current implementation: [lib/storage/local.ts](C:/Users/84983/Desktop/Resume_Generator/lib/storage/local.ts)
   - Uses `fs/promises` and `js-yaml`.
-  - Expects to find `master_data_bank.yaml` and a `resumes/` directory under `RESUME_FOLDER_PATH`.
+  - Expects to find `resume_master_bank.yaml` and a `resumes/` directory under `RESUME_FOLDER_PATH`.
   - All errors from storage methods are wrapped with clear messages to help debugging.
 
 AI provider
