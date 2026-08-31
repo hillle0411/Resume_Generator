@@ -4,9 +4,9 @@ import { ResumeSchema } from "../../../lib/resume/schema";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: { id: string } };
+type Props = { params: { id: string }; searchParams: { saved?: string; error?: string } };
 
-export default async function ResumePage({ params }: Props) {
+export default async function ResumePage({ params, searchParams }: Props) {
   const { id } = params;
   const storage = getStorage();
   const resume = await storage.getResume(id);
@@ -15,6 +15,8 @@ export default async function ResumePage({ params }: Props) {
     <main style={{ padding: 24 }}>
       <h1>Editor — {id}</h1>
       <p>Basic JSON editor (replace with CodeMirror on the client):</p>
+      {searchParams.saved && <p style={{ color: "green" }}>Saved.</p>}
+      {searchParams.error && <p style={{ color: "red" }}>{searchParams.error}</p>}
       <form method="post" action={`/api/resumes/${id}/save`}>
         <textarea name="content" defaultValue={JSON.stringify(resume, null, 2)} rows={20} cols={80} />
         <br />
