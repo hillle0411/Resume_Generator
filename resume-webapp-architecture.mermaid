@@ -1,0 +1,7 @@
+flowchart LR
+    User["User (browser)"] -->|"fills resume input form"| Vercel["Vercel\n(Next.js app + API routes)"]
+    Git["Git repo\n(Next.js source code)"] -->|"push → triggers build/deploy"| Vercel
+    OpenRouter["OpenRouter"] -->|"LLM API calls"| Vercel
+    Vercel -->|"read/write master resume data (JSON)"| SupabaseStorage["Supabase — Storage\n(master data + PDF files)"]
+    Vercel -->|"generate PDF → upload"| SupabaseStorage
+    SupabaseStorage -->|"serves file"| User
