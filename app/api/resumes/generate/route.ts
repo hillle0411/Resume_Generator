@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAIProvider } from "../../../../lib/ai/index";
+import { getUserRequirements } from "../../../../lib/ai/userRequirements";
 import { getStorage } from "../../../../lib/storage/index";
 import { v4 as uuidv4 } from "uuid";
 import { ResumeSchema } from "../../../../lib/resume/schema";
@@ -25,9 +26,10 @@ export async function POST(request: Request) {
 
     const storage = getStorage();
     const master = await storage.getMasterDataBank();
+    const userRequirements = await getUserRequirements();
 
     const ai = getAIProvider();
-    const resume = await ai.generateResume(jobDescription, master);
+    const resume = await ai.generateResume(jobDescription, master, userRequirements);
 
     // Validate with zod
     const valid = ResumeSchema.parse(resume);

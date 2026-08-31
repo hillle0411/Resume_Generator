@@ -28,7 +28,7 @@ export class OpenRouterProvider implements AIProvider {
     this.model = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
   }
 
-  async generateResume(jobDescription: string, masterBank: Record<string, unknown>): Promise<Resume> {
+  async generateResume(jobDescription: string, masterBank: Record<string, unknown>, userRequirements?: string | null): Promise<Resume> {
     const template = {
       name: "string",
       targetRole: "string (optional)",
@@ -47,7 +47,11 @@ Tailoring rules:
 - "skills": pick at most 12-15 skills, ranked by relevance to the job description. Do not include a skill just because it appears in the master bank. Remove near-duplicates (e.g. list "SQL" once, not "SQL" and "SQL functions" and "PostgreSQL (SQL)" separately).
 - "experience": keep every job, but each job's "bullets" should keep only the 3-5 most relevant/impressive bullets for this job description, not every bullet from the master bank.
 - "summary": 2-3 sentences tailored to the job description, not a generic career summary.
-
+${
+  userRequirements
+    ? `\nGlobal requirements (apply to every resume, take priority over the tailoring rules above if they conflict):\n${userRequirements}\n`
+    : ""
+}
 Do not include any explanation, markdown fences, comments, or extra fields. Do not rename any key.`;
     const user = `Master bank:\n${JSON.stringify(masterBank)}\n\nJob description:\n${jobDescription}\n\nReturn a JSON object matching the exact shape above, tailored and trimmed per the rules above — not a dump of the entire master bank.`;
 

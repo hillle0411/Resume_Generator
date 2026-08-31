@@ -140,6 +140,15 @@ Quick start
      - The service role key bypasses Row Level Security and can read/write the whole project's storage —
        treat it like any other secret; never expose it to the browser (this app only uses it server-side,
        inside `lib/storage/supabase.ts`).
+
+2c-i. (Optional) Global prompt-engineering rules applied to every generated resume
+   - Upload a `user_requirements.yaml` file into the same bucket as `SUPABASE_PDF_BUCKET` above. Its raw
+     content is fetched on every generate request and included in the AI prompt as instructions the model
+     must follow for every resume (e.g. formatting/content rules that apply regardless of job description).
+   - No extra env var needed if the file is named `user_requirements.yaml` at the bucket root; set
+     `SUPABASE_USER_REQUIREMENTS_PATH` to override the filename/path.
+   - Best-effort: if `SUPABASE_PDF_BUCKET` isn't set, or the file is missing/unreachable, generation
+     proceeds without it (logged server-side, not surfaced as a user-facing error).
      - Leave `PDF_EXPORT_TARGET` unset (or `local`) to keep saving PDFs under `RESUME_FOLDER_PATH\resumes`.
 
 2d. (Optional) Store generated resume JSON in Supabase instead of locally
