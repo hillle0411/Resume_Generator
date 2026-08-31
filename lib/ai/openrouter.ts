@@ -42,8 +42,14 @@ export class OpenRouterProvider implements AIProvider {
     const system = `You are a resume-writing assistant. Return ONLY valid JSON matching EXACTLY this shape (same keys, same nesting, "skills" is a flat array of strings, not grouped by category):
 ${JSON.stringify(template, null, 2)}
 
+Tailoring rules:
+- The master bank is a large superset of everything the candidate has ever done. Do NOT copy it wholesale — select and rewrite only what's relevant to THIS job description.
+- "skills": pick at most 12-15 skills, ranked by relevance to the job description. Do not include a skill just because it appears in the master bank. Remove near-duplicates (e.g. list "SQL" once, not "SQL" and "SQL functions" and "PostgreSQL (SQL)" separately).
+- "experience": keep every job, but each job's "bullets" should keep only the 3-5 most relevant/impressive bullets for this job description, not every bullet from the master bank.
+- "summary": 2-3 sentences tailored to the job description, not a generic career summary.
+
 Do not include any explanation, markdown fences, comments, or extra fields. Do not rename any key.`;
-    const user = `Master bank:\n${JSON.stringify(masterBank)}\n\nJob description:\n${jobDescription}\n\nReturn a JSON object matching the exact shape above, using the master bank data tailored to the job description.`;
+    const user = `Master bank:\n${JSON.stringify(masterBank)}\n\nJob description:\n${jobDescription}\n\nReturn a JSON object matching the exact shape above, tailored and trimmed per the rules above — not a dump of the entire master bank.`;
 
     const maxAttempts = Number(process.env.OPENROUTER_MAX_ATTEMPTS ?? 3);
     let lastError: unknown;
